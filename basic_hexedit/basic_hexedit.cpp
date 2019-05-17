@@ -73,11 +73,11 @@ int main(int argc, char *argv[])
         char c;
         while (!quit) {
             at_end = false;
-            while (f.get(c)) {
+            while (f.get(c) && !quit) {
                 if (lines_per_window == end_offset - start_offset) {
                     // wait for input
                     char input = '.';
-                    while ('j' != input && 'k' != input) {
+                    while ('j' != input && 'k' != input && 'q' != input) {
                         cin >> input;
                         if ('q' == input) {
                             quit = true;
@@ -131,43 +131,49 @@ int main(int argc, char *argv[])
             }
             at_end = true;
 
-            if (0 != idx % ASCII_PER_LINE) {
-                stringstream sstream;
-                sstream << setfill('0') << setw(OFFSET_PER_LINE) << hex << offset++;
-                string offset_str = sstream.str();
-                cout << offset_str << "  " << left << setfill(' ') << setw(HEX_PER_LINE) << hex_str << " " << ascii_str << endl;
-            }
-            // wait for input
-            char input = '.';
-            while ('j' != input && 'k' != input) {
-                cin >> input;
-                if ('q' == input) {
-                    quit = true;
-                } else if ('j' == input) {
-                    if (at_end) {
-                        input = '.';
-                    } else {
-                        start_offset += ASCII_PER_LINE;
-                        offset = start_offset / 16 + start_offset % 16;
+            if (!quit) {
+                if (0 != idx % ASCII_PER_LINE) {
+                    stringstream sstream;
+                    sstream << setfill('0') << setw(OFFSET_PER_LINE) << hex << offset++;
+                    string offset_str = sstream.str();
+                    cout << offset_str << "  " << left << setfill(' ') << setw(HEX_PER_LINE) << hex_str << " " << ascii_str << endl;
+                }
+                // wait for input
+                char input = '.';
+                while ('j' != input && 'k' != input && 'q' != input) {
+                    cin >> input;
+                    if ('q' == input) {
+                        quit = true;
                     }
-                } else if ('k' == input) {
-                    if (0 == start_offset) {
-                        input = '.';
-                    } else {
-                        start_offset -= ASCII_PER_LINE;
-                        offset = start_offset / 16 + start_offset % 16;
+                    else if ('j' == input) {
+                        if (at_end) {
+                            input = '.';
+                        }
+                        else {
+                            start_offset += ASCII_PER_LINE;
+                            offset = start_offset / 16 + start_offset % 16;
+                        }
+                    }
+                    else if ('k' == input) {
+                        if (0 == start_offset) {
+                            input = '.';
+                        }
+                        else {
+                            start_offset -= ASCII_PER_LINE;
+                            offset = start_offset / 16 + start_offset % 16;
+                        }
                     }
                 }
-            }
 
-            // clear output
-            for (int i = 0; i < lines_per_window; i++) {
-                printf("\n");
-            }
+                // clear output
+                for (int i = 0; i < lines_per_window; i++) {
+                    printf("\n");
+                }
 
-            // reset file offset
-            f.seekg(start_offset);
-            end_offset = start_offset;
+                // reset file offset
+                f.seekg(start_offset);
+                end_offset = start_offset;
+            }
         }
 
         // clean up
@@ -194,7 +200,7 @@ int main(int argc, char *argv[])
         char c;
         while (!quit) {
             at_end = false;
-            while (f.get(c)) {
+            while (f.get(c) && !quit) {
                 if (lines_per_window == end_offset - start_offset) {
                     // wait for input
                     char input = '.';
@@ -256,47 +262,53 @@ int main(int argc, char *argv[])
             }
             at_end = true;
 
-            if (0 != idx % ASCII_PER_LINE) {
-                stringstream sstream;
-                sstream << setfill('0') << setw(OFFSET_PER_LINE) << hex << offset++;
-                string offset_str = sstream.str();
-                stringstream outstream;
-                outstream << offset_str << "  " << left << setfill(' ') << setw(HEX_PER_LINE) << hex_str << " " << ascii_str << endl;
-                disp_buff[end_offset - start_offset] = outstream.str();
-                cout << outstream.str();
-            }
-            // wait for input
-            char input = '.';
-            while ('n' != input && 'm' != input && 'q' != input && 'h' != input && 'j' != input && 'k' != input && 'l' != input) {
-                cin >> input;
-                if ('q' == input) {
-                    quit = true;
-                } else if ('n' == input) {
-                    if (at_end) {
-                        input = '.';
-                    } else {
-                        start_offset += ASCII_PER_LINE;
-                        offset = start_offset / 16 + start_offset % 16;
-                    }
-                } else if ('m' == input) {
-                    if (0 == start_offset) {
-                        input = '.';
-                    } else {
-                        start_offset -= ASCII_PER_LINE;
-                        offset = start_offset / 16 + start_offset % 16;
-                    }
+            if (!quit) {
+                if (0 != idx % ASCII_PER_LINE) {
+                    stringstream sstream;
+                    sstream << setfill('0') << setw(OFFSET_PER_LINE) << hex << offset++;
+                    string offset_str = sstream.str();
+                    stringstream outstream;
+                    outstream << offset_str << "  " << left << setfill(' ') << setw(HEX_PER_LINE) << hex_str << " " << ascii_str << endl;
+                    disp_buff[end_offset - start_offset] = outstream.str();
+                    cout << outstream.str();
                 }
-                // <TODO>
-            }
+                // wait for input
+                char input = '.';
+                while ('n' != input && 'm' != input && 'q' != input && 'h' != input && 'j' != input && 'k' != input && 'l' != input) {
+                    cin >> input;
+                    if ('q' == input) {
+                        quit = true;
+                    }
+                    else if ('n' == input) {
+                        if (at_end) {
+                            input = '.';
+                        }
+                        else {
+                            start_offset += ASCII_PER_LINE;
+                            offset = start_offset / 16 + start_offset % 16;
+                        }
+                    }
+                    else if ('m' == input) {
+                        if (0 == start_offset) {
+                            input = '.';
+                        }
+                        else {
+                            start_offset -= ASCII_PER_LINE;
+                            offset = start_offset / 16 + start_offset % 16;
+                        }
+                    }
+                    // <TODO>
+                }
 
-            // clear output
-            for (int i = 0; i < lines_per_window; i++) {
-                printf("\n");
-            }
+                // clear output
+                for (int i = 0; i < lines_per_window; i++) {
+                    printf("\n");
+                }
 
-            // reset file offset
-            f.seekg(start_offset);
-            end_offset = start_offset;
+                // reset file offset
+                f.seekg(start_offset);
+                end_offset = start_offset;
+            }
         }
 
         // clean up
