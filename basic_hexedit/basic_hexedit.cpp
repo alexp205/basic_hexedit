@@ -101,7 +101,9 @@ int main(int argc, char *argv[])
 
                     // reset file offset
                     f.seekg(start_offset);
+                    offset = start_offset / 16 + start_offset % 16;
                     end_offset = start_offset;
+                    idx = start_offset;
                 } else {
                     // continue reading
                     if (isprint(c)) {
@@ -144,21 +146,17 @@ int main(int argc, char *argv[])
                     cin >> input;
                     if ('q' == input) {
                         quit = true;
-                    }
-                    else if ('j' == input) {
+                    } else if ('j' == input) {
                         if (at_end) {
                             input = '.';
-                        }
-                        else {
+                        } else {
                             start_offset += ASCII_PER_LINE;
                             offset = start_offset / 16 + start_offset % 16;
                         }
-                    }
-                    else if ('k' == input) {
+                    } else if ('k' == input) {
                         if (0 == start_offset) {
                             input = '.';
-                        }
-                        else {
+                        } else {
                             start_offset -= ASCII_PER_LINE;
                             offset = start_offset / 16 + start_offset % 16;
                         }
@@ -172,7 +170,9 @@ int main(int argc, char *argv[])
 
                 // reset file offset
                 f.seekg(start_offset);
+                offset = start_offset / 16 + start_offset % 16;
                 end_offset = start_offset;
+                idx = start_offset;
             }
         }
 
@@ -181,7 +181,7 @@ int main(int argc, char *argv[])
     } else {
         // read in file
         fstream f;
-        f.open(filepath, fstream::binary);
+        f.open(filepath, fstream::in | fstream::out | fstream::binary);
         if (!f.is_open()) {
             printf("[ERROR] error opening file\n");
             exit(1);
@@ -189,6 +189,7 @@ int main(int argc, char *argv[])
         bool quit = false;
         bool at_end = false;
         vector<string> disp_buff(lines_per_window);
+        vector<int> select_idx{ 0, 0 }; // (x: 0 - 15, y: 0 - lines_per_window)
 
         // read and print lines
         string hex_str;
@@ -202,9 +203,15 @@ int main(int argc, char *argv[])
             at_end = false;
             while (f.get(c) && !quit) {
                 if (lines_per_window == end_offset - start_offset) {
+                    // display current selected
+                    string str = disp_buff[select_idx[1]];
+                    string hex_str = str.substr(OFFSET_PER_LINE + 1 + (3 * select_idx[0]) + 1, 3);
+                    string ascii_str = str.substr(OFFSET_PER_LINE + 1 + HEX_PER_LINE + 1 + select_idx[0] + 1, 1);
+                    cout << "\r" << hex_str << ascii_str;
+
                     // wait for input
                     char input = '.';
-                    while ('n' != input && 'm' != input && 'q' != input && 'h' != input && 'j' != input && 'k' != input && 'l' != input) {
+                    while ('n' != input && 'm' != input && 'q' != input && 'i' != input) {
                         cin >> input;
                         if ('q' == input) {
                             quit = true;
@@ -218,8 +225,45 @@ int main(int argc, char *argv[])
                                 start_offset -= ASCII_PER_LINE;
                                 offset = start_offset / 16 + start_offset % 16;
                             }
+                        } else if ('h' == input) {
+                            // cursor left
+                            if (select_idx[0] > 0) select_idx[0]--;
+                        } else if ('j' == input) {
+                            // cursor down
+                            if (select_idx[1] == end_offset - start_offset - 1) {
+                                select_idx[1]++;
+                                select_idx[0] = 0;
+                            }
+                            if (select_idx[1] < end_offset - start_offset) select_idx[1]++;
+                        } else if ('k' == input) {
+                            // cursor up
+                            if (select_idx[1] > 0) select_idx[1]--;
+                        } else if ('l' == input) {
+                            // cursor right
+                            if ((select_idx[1] == end_offset && select_idx[0] < idx % ASCII_PER_LINE) ||
+                                (select_idx[1] != end_offset && select_idx[0] < 15)) select_idx[0]++;
+                        } else if ('i' == input) {
+                            // wait for input
+                            char replace = '.';
+                            cin >> replace;
+                            string s(1, replace);
+                            
+                            // write to file
+                            int f_offset = start_offset + (16 * select_idx[1]) + select_idx[0];
+                            f.close();
+                            f.open(filepath, fstream::in | fstream::out | fstream::binary);
+                            f.seekp(f_offset);
+                            f.write(&replace, sizeof(replace));
+                            f.close();
+                            f.open(filepath, fstream::in | fstream::out | fstream::binary);
                         }
-                        // <TODO>
+
+                        if ('h' == input || 'j' == input || 'k' == input || 'l' == input) {
+                            string str = disp_buff[select_idx[1]];
+                            string hex_str = str.substr(OFFSET_PER_LINE + 1 + (3 * select_idx[0]) + 1, 3);
+                            string ascii_str = str.substr(OFFSET_PER_LINE + 1 + HEX_PER_LINE + 1 + select_idx[0] + 1, 1);
+                            cout << "\r" << hex_str << ascii_str;
+                        }
                     }
 
                     // clear output
@@ -229,7 +273,9 @@ int main(int argc, char *argv[])
 
                     // reset file offset
                     f.seekg(start_offset);
+                    offset = start_offset / 16 + start_offset % 16;
                     end_offset = start_offset;
+                    idx = start_offset;
                 } else {
                     // continue reading
                     if (isprint(c)) {
@@ -271,33 +317,72 @@ int main(int argc, char *argv[])
                     outstream << offset_str << "  " << left << setfill(' ') << setw(HEX_PER_LINE) << hex_str << " " << ascii_str << endl;
                     disp_buff[end_offset - start_offset] = outstream.str();
                     cout << outstream.str();
+
+                    hex_str = "";
+                    ascii_str = "";
                 }
                 // wait for input
+                string str = disp_buff[select_idx[1]];
+                string hex_str = str.substr(OFFSET_PER_LINE + 1 + (3 * select_idx[0]) + 1, 3);
+                string ascii_str = str.substr(OFFSET_PER_LINE + 1 + HEX_PER_LINE + 1 + select_idx[0] + 1, 1);
+                cout << "\r" << hex_str << ascii_str;
                 char input = '.';
-                while ('n' != input && 'm' != input && 'q' != input && 'h' != input && 'j' != input && 'k' != input && 'l' != input) {
+                while ('n' != input && 'm' != input && 'q' != input && 'i' != input) {
                     cin >> input;
                     if ('q' == input) {
                         quit = true;
-                    }
-                    else if ('n' == input) {
+                    } else if ('n' == input) {
                         if (at_end) {
                             input = '.';
-                        }
-                        else {
+                        } else {
                             start_offset += ASCII_PER_LINE;
                             offset = start_offset / 16 + start_offset % 16;
                         }
-                    }
-                    else if ('m' == input) {
+                    } else if ('m' == input) {
                         if (0 == start_offset) {
                             input = '.';
-                        }
-                        else {
+                        } else {
                             start_offset -= ASCII_PER_LINE;
                             offset = start_offset / 16 + start_offset % 16;
                         }
+                    } else if ('h' == input) {
+                        // cursor left
+                        if (select_idx[0] > 0) select_idx[0]--;
+                    } else if ('j' == input) {
+                        // cursor down
+                        if (select_idx[1] == end_offset - start_offset - 1) {
+                            select_idx[1]++;
+                            select_idx[0] = 0;
+                        }
+                        if (select_idx[1] < end_offset - start_offset) select_idx[1]++;
+                    } else if ('k' == input) {
+                        // cursor up
+                        if (select_idx[1] > 0) select_idx[1]--;
+                    } else if ('l' == input) {
+                        // cursor right
+                        if ((select_idx[1] == end_offset && select_idx[0] < idx % ASCII_PER_LINE) || 
+                            (select_idx[1] != end_offset && select_idx[0] < 15)) select_idx[0]++;
+                    } else if ('i' == input) {
+                        // wait for input
+                        char replace = '.';
+                        cin >> replace;
+
+                        // write to file
+                        int f_offset = start_offset + (16 * select_idx[1]) + select_idx[0];
+                        f.close();
+                        f.open(filepath, fstream::in | fstream::out | fstream::binary);
+                        f.seekp(f_offset);
+                        f.write(&replace, sizeof(replace));
+                        f.close();
+                        f.open(filepath, fstream::in | fstream::out | fstream::binary);
                     }
-                    // <TODO>
+
+                    if ('h' == input || 'j' == input || 'k' == input || 'l' == input) {
+                        string str = disp_buff[select_idx[1]];
+                        string hex_str = str.substr(OFFSET_PER_LINE + 1 + (3 * select_idx[0]) + 1, 3);
+                        string ascii_str = str.substr(OFFSET_PER_LINE + 1 + HEX_PER_LINE + 1 + select_idx[0] + 1, 1);
+                        cout << "\r" << hex_str << ascii_str;
+                    }
                 }
 
                 // clear output
@@ -307,7 +392,9 @@ int main(int argc, char *argv[])
 
                 // reset file offset
                 f.seekg(start_offset);
+                offset = start_offset / 16 + start_offset % 16;
                 end_offset = start_offset;
+                idx = start_offset;
             }
         }
 
